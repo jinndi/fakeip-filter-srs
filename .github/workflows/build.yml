@@ -58,6 +58,13 @@ jobs:
 
                 return
 
+            # DOMAIN-SUFFIX
+            if line.startswith("DOMAIN-SUFFIX,"):
+                suffix.add(line.split(",",1)[1].lower())
+                return
+
+            # +
+            line = line.lstrip("+")
             line = line.lower()
 
             # wildcard
