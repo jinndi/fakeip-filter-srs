@@ -1,0 +1,153 @@
+name: Build FakeIP Filter SRS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Convert fake-ip list to sing-box rule-set JSON
+      run: |
+        python << 'EOF'
+        import json
+        import re
+        import urllib.request
+
+        input_file = "fakeip-filter.txt"
+        output_file = "fakeip-filter.json"
+
+        suffix = set()
+        keyword = set()
+        regex = set()
+        domain = set()
+
+        def add_rule(line):
+            line = line.strip()
+
+            if not line or line.startswith("#"):
+                return
+
+            # remote rule-set JSON
+            if line.startswith("http://") or line.startswith("https://"):
+                print("Downloading:", line)
+
+                try:
+                    with urllib.request.urlopen(line) as r:
+                        data = json.load(r)
+
+                    for rule in data.get("rules", []):
+                        domain.update(rule.get("domain", []))
+                        keyword.update(rule.get("domain_keyword", []))
+                        regex.update(rule.get("domain_regex", []))
+                        suffix.update(rule.get("domain_suffix", []))
+
+                except Exception as e:
+                    print("Failed:", line, e)
+
+                return
+
+            line = line.lower()
+
+            # wildcard
+            if "*" in line:
+
+                if line.startswith("*.") and "*" not in line[2:]:
+                    suffix.add(line[2:])
+                    return
+
+                escaped = re.escape(line)
+                escaped = escaped.replace("\\*", ".*")
+                regex.add("^" + escaped + "$")
+                return
+
+            # normal domain
+            if "." in line:
+                suffix.add(line)
+            else:
+                keyword.add(line)
+
+        with open(input_file, encoding="utf-8") as f:
+            for line in f:
+                add_rule(line)
+
+        # remove duplicates between domain_suffix and domain
+        suffix -= domain
+
+        result = {
+            "version": 4,
+            "rules": [
+                {
+                  "domain": sorted(domain),
+                  "domain_keyword": sorted(keyword),
+                  "domain_regex": sorted(regex),
+                  "domain_suffix": sorted(suffix),
+                }
+            ]
+        }
+
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(result, f, indent=2, ensure_ascii=False)
+
+        print("domain:", len(domain))
+        print("keyword:", len(keyword))
+        print("regex:", len(regex))
+        print("suffix:", len(suffix))
+        EOF
+    - name: Install sing-box
+      run: |
+        VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | grep "tag_name" | cut -d '"' -f 4)
+        VERSION=${VERSION#v}
+        wget https://github.com/SagerNet/sing-box/releases/download/v$VERSION/sing-box-$VERSION-linux-amd64.tar.gz
+        tar -xzf sing-box-$VERSION-linux-amd64.tar.gz
+        sudo mv sing-box*/sing-box /usr/local/bin/
+        chmod +x /usr/local/bin/sing-box
+
+    - name: Compile SRS
+      run: |
+        sing-box rule-set compile fakeip-filter.json -o fakeip-filter.srs
+
+    - name: Count rules
+      id: count
+      run: |
+        python -c "
+        import json
+        data=json.load(open('fakeip-filter.json'))
+        print('count=' + str(
+            len(data['rules'][0].get('domain', [])) +
+            len(data['rules'][0].get('domain_keyword', [])) +
+            len(data['rules'][0].get('domain_regex', [])) +
+            len(data['rules'][0].get('domain_suffix', []))
+        ))
+        " >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v1.${{ github.run_number }}
+        name: FakeIP Filter v1.${{ github.run_number }}
+        files: |
+          fakeip-filter.json
+          fakeip-filter.srs
+        body: |
+          Auto build fakeip-filter for sing-box
+
+          Total rules: ${{ steps.count.outputs.count }}
+
+          Output:
+          - JSON rule-set
+          - SRS compiled for sing-box
+
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

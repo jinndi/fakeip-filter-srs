@@ -1,0 +1,13 @@
+# BASE (https://github.com/juewuy/ShellCrash/blob/dev/public/fake_ip_filter.list)
+https://raw.githubusercontent.com/DustinWin/ruleset_geodata/refs/heads/sing-box-ruleset/fakeip-filter.json
+
+# Router
+*.keenetic.net
+*.keenetic.com
+*.keenetic.pro
+*.keenetic.link
+*.netcraze.io
+*.netcraze.club 
+*.netcraze.link 
+*.netcraze.pro
+*.netcraze.ru
