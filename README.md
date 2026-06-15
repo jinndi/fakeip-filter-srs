@@ -9,7 +9,15 @@
 
 Сборка выполняется автоматически через GitHub Actions.
 
-# Ссылка на файл `fakeip-filter.srs`
+# Ссылки на файл `fakeip-filter.srs`
+
+```
+https://cdn.jsdelivr.net/gh/jinndi/fakeip-filter-srs@main/fakeip-filter.srs
+```
+
+```
+https://github.com/jinndi/fakeip-filter-srs/raw/main/fakeip-filter.srs
+```
 
 ```
 https://github.com/jinndi/fakeip-filter-srs/releases/latest/download/fakeip-filter.srs 
