@@ -2,6 +2,8 @@ name: Build FakeIP Filter SRS
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
 
 jobs:
   build:
@@ -139,6 +141,20 @@ jobs:
         ))
         " >> $GITHUB_OUTPUT
 
+    - name: Commit files to repository
+      env:
+        TZ: "Europe/Moscow"
+      run: |
+        if [ -z "$(git status --porcelain fakeip-filter.json fakeip-filter.srs)" ]; then
+          echo "No changes in generated files; skipping commit."
+        else
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fakeip-filter.json fakeip-filter.srs
+          git commit -m "[auto] Update FakeIP filters $(date '+%Y-%m-%d %H:%M:%S')"
+          git push
+        fi
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
@@ -155,6 +171,5 @@ jobs:
           Output:
           - JSON rule-set
           - SRS compiled for sing-box
-
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
