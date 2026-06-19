@@ -153,6 +153,8 @@ jobs:
           git add fakeip-filter.json fakeip-filter.srs
           git commit -m "[auto] Update FakeIP filters $(date '+%Y-%m-%d %H:%M:%S')"
           git push
+
+          curl -sfL "https://purge.jsdelivr.net/gh/jinndi/fakeip-filter-srs@main/fakeip-filter.srs"
         fi
 
     - name: Create Release
