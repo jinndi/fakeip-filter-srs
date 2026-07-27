@@ -98,7 +98,7 @@ jobs:
         suffix -= domain
 
         result = {
-            "version": 4,
+            "version": 3,
             "rules": [
                 {
                   "domain": sorted(domain),
